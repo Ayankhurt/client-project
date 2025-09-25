@@ -1,0 +1,59 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model FieldDefinition {
+  id          String    @id @default(uuid())
+  code        String
+  name        String
+  type        FieldType
+  validations Json?
+  version     Int
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  assignments FieldAssignment[]
+  values      FieldValue[] // one-to-many relation with FieldValue
+}
+
+model FieldAssignment {
+  id          String  @id @default(uuid())
+  entity_type String
+  field_id    String
+  order       Int
+  visible     Boolean @default(true)
+  filterable  Boolean @default(false)
+
+  FieldDefinition FieldDefinition @relation(fields: [field_id], references: [id])
+}
+
+model FieldValue {
+  id         String   @id @default(uuid())
+  entity_id  String
+  field_id   String
+  value      Json
+  created_by String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Opposite relation back to FieldDefinition
+  fieldDefinition FieldDefinition @relation(fields: [field_id], references: [id])
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  LABEL
+  SINGLE_SELECT
+  MULTI_SELECT
+  LINK
+  EMAIL
+  PHONE
+}
