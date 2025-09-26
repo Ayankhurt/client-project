@@ -16,6 +16,11 @@ export class DefinitionsController {
     return this.definitionsService.findAll();
   }
 
+  @Get('/schema')
+  getSchema() {
+    return this.definitionsService.getSchema();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.definitionsService.findOne(id); // id string hoga (UUID)

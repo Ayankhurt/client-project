@@ -4,19 +4,12 @@ import { AssignmentsService } from './assignments.service';
 @Controller('assignments')
 export class AssignmentsController {
   constructor(private readonly assignmentsService: AssignmentsService) {}
+  
+@Post()
+create(@Body() body: any) {
+  return this.assignmentsService.create(body);
+}
 
-  @Post()
-  create(@Body() body: any) {
-    return this.assignmentsService.create({
-      entity_type: body.entity_type,
-      order: body.order,
-      visible: body.visible,
-      filterable: body.filterable,
-      FieldDefinition: {
-        connect: { id: body.field_id }, // 👈 relation properly connect hoga
-      },
-    });
-  }
 
   @Get()
   findAll() {

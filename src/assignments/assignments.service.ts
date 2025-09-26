@@ -1,38 +1,54 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AssignmentsService {
   constructor(private prisma: PrismaService) {}
 
-  create(data: Prisma.FieldAssignmentCreateInput) {
-    return this.prisma.fieldAssignment.create({ data });
+  // ✅ Create Assignment
+  async create(data: { entity_type: string; field_id: string; order: number; visible?: boolean; filterable?: boolean }) {
+    return this.prisma.fieldAssignment.create({
+      data: {
+        entity_type: data.entity_type,
+        order: data.order,
+        visible: data.visible ?? true,
+        filterable: data.filterable ?? false,
+        FieldDefinition: {
+          connect: { id: data.field_id }, // ✅ relation connect
+        },
+      },
+      include: { FieldDefinition: true },
+    });
   }
 
-  findAll() {
+  // ✅ Get All
+  async findAll() {
     return this.prisma.fieldAssignment.findMany({
       include: { FieldDefinition: true },
     });
   }
 
+  // ✅ Get One
   async findOne(id: string) {
-    const assignment = await this.prisma.fieldAssignment.findUnique({
+    return this.prisma.fieldAssignment.findUnique({
       where: { id },
       include: { FieldDefinition: true },
     });
-    if (!assignment) throw new NotFoundException(`Assignment ${id} not found`);
-    return assignment;
   }
 
-  update(id: string, data: Prisma.FieldAssignmentUpdateInput) {
+  // ✅ Update
+  async update(id: string, data: any) {
     return this.prisma.fieldAssignment.update({
       where: { id },
       data,
+      include: { FieldDefinition: true },
     });
   }
 
-  remove(id: string) {
-    return this.prisma.fieldAssignment.delete({ where: { id } });
+  // ✅ Delete
+  async remove(id: string) {
+    return this.prisma.fieldAssignment.delete({
+      where: { id },
+    });
   }
 }
