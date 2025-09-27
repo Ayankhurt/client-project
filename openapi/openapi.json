@@ -1,0 +1,276 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/definitions": {
+      "post": {
+        "operationId": "DefinitionsController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Definitions"
+        ]
+      },
+      "get": {
+        "operationId": "DefinitionsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Definitions"
+        ]
+      }
+    },
+    "/definitions/schema": {
+      "get": {
+        "operationId": "DefinitionsController_getSchema",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Definitions"
+        ]
+      }
+    },
+    "/definitions/{id}": {
+      "get": {
+        "operationId": "DefinitionsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Definitions"
+        ]
+      },
+      "patch": {
+        "operationId": "DefinitionsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Definitions"
+        ]
+      },
+      "delete": {
+        "operationId": "DefinitionsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Definitions"
+        ]
+      }
+    },
+    "/assignments": {
+      "post": {
+        "operationId": "AssignmentsController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Assignments"
+        ]
+      },
+      "get": {
+        "operationId": "AssignmentsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Assignments"
+        ]
+      }
+    },
+    "/assignments/{id}": {
+      "get": {
+        "operationId": "AssignmentsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Assignments"
+        ]
+      },
+      "patch": {
+        "operationId": "AssignmentsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Assignments"
+        ]
+      },
+      "delete": {
+        "operationId": "AssignmentsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Assignments"
+        ]
+      }
+    },
+    "/values": {
+      "post": {
+        "operationId": "ValuesController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Values"
+        ]
+      },
+      "get": {
+        "operationId": "ValuesController_findByEntity",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Values"
+        ]
+      }
+    },
+    "/filters/search": {
+      "post": {
+        "operationId": "FiltersController_search",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FiltersSearchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Filters"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Custom Fields Service",
+    "description": "API documentation for Custom Fields microservice",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "FiltersSearchDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}
