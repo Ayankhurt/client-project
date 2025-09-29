@@ -6,7 +6,7 @@ export class CreateAssignmentDto {
   @IsString()
   entity_type: string;
 
-  @ApiProperty({ example: 'uuid-of-field', description: 'ID of the field definition to assign' })
+  @ApiProperty({ example: '89fe0dd4-160f-4b0e-8f81-18a14012d020', description: 'ID of the field definition to assign' })
   @IsString()
   field_id: string;
 

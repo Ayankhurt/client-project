@@ -10,14 +10,23 @@ export class AssignmentsService {
 
   // Create a new assignment
   async create(createDto: CreateAssignmentDto): Promise<FieldAssignment> {
+    // Agar field_id empty ho → env ka FIXED_UUID use karo
+    const fieldId = createDto.field_id || process.env.FIXED_UUID;
+
+    if (!fieldId) {
+      throw new BadRequestException(
+        'field_id is required or FIXED_UUID must be set in environment',
+      );
+    }
+
     // Check if field_id exists in FieldDefinition
     const fieldExists = await this.prisma.fieldDefinition.findUnique({
-      where: { id: createDto.field_id },
+      where: { id: fieldId },
     });
 
     if (!fieldExists) {
       throw new BadRequestException(
-        `FieldDefinition with id ${createDto.field_id} does not exist`,
+        `FieldDefinition with id ${fieldId} does not exist`,
       );
     }
 
@@ -25,7 +34,7 @@ export class AssignmentsService {
     const existing = await this.prisma.fieldAssignment.findFirst({
       where: {
         entity_type: createDto.entity_type,
-        field_id: createDto.field_id,
+        field_id: fieldId,
       },
     });
     if (existing) {
@@ -34,7 +43,12 @@ export class AssignmentsService {
       );
     }
 
-    return this.prisma.fieldAssignment.create({ data: createDto });
+    return this.prisma.fieldAssignment.create({
+      data: {
+        ...createDto,
+        field_id: fieldId, // final resolved value
+      },
+    });
   }
 
   // Get all assignments or filter by entity type
@@ -58,21 +72,26 @@ export class AssignmentsService {
     id: string,
     updateDto: UpdateAssignmentDto,
   ): Promise<FieldAssignment> {
-    // Optional: validate if field_id is being updated
-    if (updateDto.field_id) {
+    const fieldId = updateDto.field_id || process.env.FIXED_UUID;
+
+    // validate agar field_id update me diya gaya ho
+    if (fieldId) {
       const fieldExists = await this.prisma.fieldDefinition.findUnique({
-        where: { id: updateDto.field_id },
+        where: { id: fieldId },
       });
       if (!fieldExists) {
         throw new BadRequestException(
-          `FieldDefinition with id ${updateDto.field_id} does not exist`,
+          `FieldDefinition with id ${fieldId} does not exist`,
         );
       }
     }
 
     return this.prisma.fieldAssignment.update({
       where: { id },
-      data: updateDto,
+      data: {
+        ...updateDto,
+        field_id: fieldId, // fallback env FIXED_UUID
+      },
       include: { FieldDefinition: true },
     });
   }

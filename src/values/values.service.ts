@@ -1,140 +1,96 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../common/prisma.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateValueDto } from './dto/create-value.dto';
 import { CreateBatchValuesDto } from './dto/create-batch-values.dto';
 import { UpdateValueDto } from './dto/update-value.dto';
-import { FieldValue } from '@prisma/client';
+import { PrismaService } from 'src/common/prisma.service';
 
 @Injectable()
 export class ValuesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  // Create a new value
-  async create(dto: CreateValueDto): Promise<FieldValue> {
-    // Check if the field exists
-    const field = await this.prisma.fieldDefinition.findUnique({
-      where: { id: dto.field_id },
-    });
-    if (!field) throw new BadRequestException('FieldDefinition not found');
-
-    // Ensure value is stored as JSON
-    const valueToStore = this.normalizeValue(dto.value);
-
+  // Single create
+  async create(dto: CreateValueDto) {
     return this.prisma.fieldValue.create({
       data: {
-        ...dto,
-        value: valueToStore,
+        entity_id: dto.entity_id,
+        entity_type: dto.entity_type,
+        field_id: dto.field_id,
+        value: dto.value,
+        created_by: dto.created_by,
       },
     });
   }
 
-  // Create multiple values for an entity (batch)
-  async createBatch(dto: CreateBatchValuesDto): Promise<FieldValue[]> {
-    // Validate all field IDs exist
-    const fieldIds = dto.values.map(v => v.field_id);
-    const fields = await this.prisma.fieldDefinition.findMany({
-      where: { id: { in: fieldIds } },
+  // Batch create
+  async createBatch(dto: CreateBatchValuesDto) {
+    const values = dto.values.map((v) => ({
+      entity_id: dto.entity_id,
+      entity_type: dto.entity_type,
+      field_id: v.field_id,
+      value: v.value,
+      created_by: dto.created_by,
+    }));
+
+    return this.prisma.fieldValue.createMany({
+      data: values,
+      skipDuplicates: true,
     });
-
-    if (fields.length !== fieldIds.length) {
-      const foundIds = fields.map(f => f.id);
-      const missingIds = fieldIds.filter(id => !foundIds.includes(id));
-      throw new BadRequestException(`FieldDefinitions not found: ${missingIds.join(', ')}`);
-    }
-
-    // Create all values in a transaction
-    const values = await this.prisma.$transaction(
-      dto.values.map(fieldValue => 
-        this.prisma.fieldValue.create({
-          data: {
-            entity_id: dto.entity_id,
-            entity_type: dto.entity_type,
-            field_id: fieldValue.field_id,
-            value: this.normalizeValue(fieldValue.value),
-            created_by: dto.created_by,
-          },
-        })
-      )
-    );
-
-    return values;
   }
 
-  // Get values (supports multiple entityIds)
-  async findAll(entityType?: string, entityIds?: string[]): Promise<FieldValue[]> {
+  // Get all
+  async findAll(entityType?: string, entityIds?: string[]) {
     return this.prisma.fieldValue.findMany({
       where: {
         entity_type: entityType,
-        entity_id: entityIds ? { in: entityIds } : undefined,
+        ...(entityIds ? { entity_id: { in: entityIds } } : {}),
       },
-      include: { FieldDefinition: true },
+      include: {
+        FieldDefinition: true,
+      },
     });
   }
 
-  // Get values grouped by entity
-  async findAllGroupedByEntity(entityType?: string, entityIds?: string[]): Promise<Record<string, any>> {
-    const values = await this.prisma.fieldValue.findMany({
-      where: {
-        entity_type: entityType,
-        entity_id: entityIds ? { in: entityIds } : undefined,
-      },
-      include: { FieldDefinition: true },
-    });
+  // Grouped by entity
+  async findAllGroupedByEntity(entityType?: string, entityIds?: string[]) {
+    const values = await this.findAll(entityType, entityIds);
 
-    // Group by entity_id
-    const grouped: Record<string, any> = {};
-    values.forEach(value => {
-      if (!grouped[value.entity_id]) {
-        grouped[value.entity_id] = {
-          entity_id: value.entity_id,
-          entity_type: value.entity_type,
-          values: [],
-        };
+    const grouped: Record<string, any[]> = {};
+    values.forEach((val) => {
+      if (!grouped[val.entity_id]) {
+        grouped[val.entity_id] = [];
       }
-      grouped[value.entity_id].values.push({
-        field_id: value.field_id,
-        value: value.value,
-        field_definition: value.FieldDefinition,
-      });
+      grouped[val.entity_id].push(val);
     });
 
     return grouped;
   }
 
-  // Get single value by ID
-  async findOne(id: string): Promise<FieldValue> {
-    return this.prisma.fieldValue.findUniqueOrThrow({ where: { id } });
+  // Get one
+  async findOne(id: string) {
+    const value = await this.prisma.fieldValue.findUnique({
+      where: { id },
+      include: { FieldDefinition: true },
+    });
+
+    if (!value) {
+      throw new NotFoundException(`Value with id ${id} not found`);
+    }
+
+    return value;
   }
 
-  // Update a value
-  async update(id: string, dto: UpdateValueDto): Promise<FieldValue> {
-    const existing = await this.prisma.fieldValue.findUnique({
-      where: { id },
-    });
-    if (!existing) throw new NotFoundException('FieldValue not found');
-
-    const valueToStore = dto.value !== undefined ? this.normalizeValue(dto.value) : existing.value;
-
+  // Update
+  async update(id: string, dto: UpdateValueDto) {
     return this.prisma.fieldValue.update({
       where: { id },
-      data: { ...dto, value: valueToStore },
+      data: dto,
     });
   }
 
-  // Delete a value
-  async remove(id: string): Promise<{ message: string }> {
-    await this.prisma.fieldValue.delete({ where: { id } });
-    return { message: 'Value deleted successfully' };
-  }
-
-  // Ensure value is JSON-compatible
-  private normalizeValue(value: any): any {
-    if (value === null || value === undefined) return null;
-
-    // If array or object, store as-is
-    if (typeof value === 'object') return value;
-
-    // Primitives: convert string/number/boolean
-    return value;
+  // Delete
+  async remove(id: string) {
+    return this.prisma.fieldValue.delete({
+      where: { id },
+    });
   }
 }

@@ -21,7 +21,7 @@ export class ValuesController {
         value: {
           entity_id: 'tracking-123',
           entity_type: 'TRACKING',
-          field_id: 'priority-id',
+          field_id: '89fe0dd4-160f-4b0e-8f81-18a14012d020',
           value: 'High',
           created_by: 'user-1',
         },
@@ -46,8 +46,8 @@ export class ValuesController {
           entity_type: 'TRACKING',
           created_by: 'user-1',
           values: [
-            { field_id: 'priority-id', value: 'High' },
-            { field_id: 'due_date-id', value: '2025-09-29' },
+            { field_id: '89fe0dd4-160f-4b0e-8f81-18a14012d020', value: 'High' },
+            { field_id: '89fe0dd4-160f-4b0e-8f81-18a14012d020', value: '2025-09-29' },
           ],
         },
       },
@@ -91,7 +91,7 @@ export class ValuesController {
           id: 'value-uuid',
           entity_id: 'tracking-123',
           entity_type: 'TRACKING',
-          field_id: 'priority-id',
+          field_id: '89fe0dd4-160f-4b0e-8f81-18a14012d020',
           value: 'High',
           FieldDefinition: {
             id: 'priority-id',
@@ -136,7 +136,7 @@ export class ValuesController {
         id: 'value-uuid',
         entity_id: 'tracking-123',
         entity_type: 'TRACKING',
-        field_id: 'priority-id',
+        field_id: '89fe0dd4-160f-4b0e-8f81-18a14012d020',
         value: 'High',
       },
     },

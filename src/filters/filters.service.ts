@@ -6,10 +6,14 @@ import { PrismaService } from '../common/prisma.service';
 export class FiltersService {
   constructor(private prisma: PrismaService) {}
 
-  async search(searchFilterDto: SearchFilterDto): Promise<string[]> {
+  async search(
+    searchFilterDto: SearchFilterDto,
+  ): Promise<{ status: string; matchedFields: string[]; entityIds: string[] }> {
     const { entityType, conditions } = searchFilterDto;
-    // Build dynamic Prisma query
-    const where: Record<string, unknown> = { entity_type: entityType };
+
+    // Base filter
+    const where: Record<string, unknown> = { entity_type: entityType.toUpperCase() }; // 🔥 casing safe
+    const matchedFields: string[] = [];
 
     for (const cond of conditions) {
       const def = await this.prisma.fieldDefinition.findFirst({
@@ -18,38 +22,75 @@ export class FiltersService {
       });
       if (!def) continue;
 
-      // Map operator to Prisma query based on type
       let prismaCond: Record<string, unknown> | undefined;
+
+      // Map operator based on type
       switch (def.type) {
         case 'TEXT':
           if (cond.operator === 'contains') {
             prismaCond = {
-              value: { path: '$', string_contains: String(cond.value) },
-            }; // JSON path
-          } else if (cond.operator === 'equals') {
-            prismaCond = { value: String(cond.value) };
+              value: { string_contains: String(cond.value) },
+            };
+          } else if (['equals', '='].includes(cond.operator)) {
+            prismaCond = { value: { equals: String(cond.value) } };
           }
           break;
+
         case 'NUMBER':
-          if (cond.operator === 'gt') {
+          if (['gt', '>'].includes(cond.operator)) {
             prismaCond = { value: { gt: Number(cond.value) } };
-          } // etc.
+          } else if (['lt', '<'].includes(cond.operator)) {
+            prismaCond = { value: { lt: Number(cond.value) } };
+          } else if (['equals', '='].includes(cond.operator)) {
+            prismaCond = { value: { equals: Number(cond.value) } };
+          }
           break;
-        // Add cases for other types, using JSON queries since value is Json
+
+        case 'BOOLEAN':
+          prismaCond = {
+            value: {
+              equals:
+                cond.value === true ||
+                cond.value === 'true' ||
+                cond.value === 1,
+            },
+          };
+          break;
+
+        case 'DATE':
+          if (cond.operator === 'before') {
+            prismaCond = { value: { lt: new Date(cond.value) } };
+          } else if (cond.operator === 'after') {
+            prismaCond = { value: { gt: new Date(cond.value) } };
+          } else if (['equals', '='].includes(cond.operator)) {
+            prismaCond = { value: { equals: new Date(cond.value) } };
+          }
+          break;
+
+        // TODO: add MULTI_SELECT, LABEL etc.
       }
+
+      // Attach condition with field_id
       if (prismaCond) {
         const existingAnd = Array.isArray(where.AND)
           ? (where.AND as Record<string, unknown>[])
           : [];
-        where.AND = [...existingAnd, prismaCond];
+        where.AND = [...existingAnd, { field_id: def.id, ...prismaCond }];
+        matchedFields.push(cond.fieldCode);
       }
     }
 
+    // Query values
     const results = await this.prisma.fieldValue.findMany({
-      where: where,
+      where,
       select: { entity_id: true },
       distinct: ['entity_id'],
     });
-    return results.map((r) => r.entity_id);
+
+    return {
+      status: 'success',
+      matchedFields,
+      entityIds: results.map((r) => r.entity_id),
+    };
   }
 }
