@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ValuesService } from './values.service';
 import { ValuesController } from './values.controller';
+import { ValuesService } from './values.service';
 
 @Module({
+  controllers: [ValuesController],
   providers: [ValuesService],
-  controllers: [ValuesController]
+  exports: [ValuesService],
 })
 export class ValuesModule {}

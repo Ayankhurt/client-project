@@ -40,6 +40,9 @@ CREATE TABLE "public"."FieldValue" (
     CONSTRAINT "FieldValue_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateIndex
+CREATE UNIQUE INDEX "FieldDefinition_code_version_key" ON "public"."FieldDefinition"("code", "version");
+
 -- AddForeignKey
 ALTER TABLE "public"."FieldAssignment" ADD CONSTRAINT "FieldAssignment_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "public"."FieldDefinition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 

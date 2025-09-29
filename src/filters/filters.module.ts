@@ -4,6 +4,7 @@ import { FiltersService } from './filters.service';
 
 @Module({
   controllers: [FiltersController],
-  providers: [FiltersService]
+  providers: [FiltersService],
+  exports: [FiltersService],
 })
 export class FiltersModule {}

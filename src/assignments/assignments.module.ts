@@ -6,5 +6,6 @@ import { PrismaService } from '../common/prisma.service';
 @Module({
   controllers: [AssignmentsController],
   providers: [AssignmentsService, PrismaService],
+  exports: [AssignmentsService],
 })
 export class AssignmentsModule {}

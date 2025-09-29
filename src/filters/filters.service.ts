@@ -1,62 +1,55 @@
 import { Injectable } from '@nestjs/common';
+import { SearchFilterDto } from './dto/search-filter.dto';
 import { PrismaService } from '../common/prisma.service';
-import { FiltersSearchDto } from './dto/filter.dto';
 
 @Injectable()
 export class FiltersService {
   constructor(private prisma: PrismaService) {}
 
-  async search(dto: FiltersSearchDto) {
-    // Step 1: Get assignments for this entity type
-    const assignments = await this.prisma.fieldAssignment.findMany({
-      where: { entity_type: dto.entityType },
-      include: { FieldDefinition: true },
-    });
+  async search(searchFilterDto: SearchFilterDto): Promise<string[]> {
+    const { entityType, conditions } = searchFilterDto;
+    // Build dynamic Prisma query
+    const where: Record<string, unknown> = { entity_type: entityType };
 
-    // Step 2: Build filter conditions
-    const fieldMap = new Map(
-      assignments.map(a => [a.FieldDefinition.code, a.field_id]),
-    );
-
-    const conditions: any[] = [];
-    for (const f of dto.filters) {
-      const fieldId = fieldMap.get(f.fieldCode);
-      if (!fieldId) continue; // field not found for this entityType
-
-      let condition: any;
-      switch (f.operator) {
-        case '=':
-          condition = { equals: f.value };
-          break;
-        case '>':
-          condition = { gt: f.value };
-          break;
-        case '<':
-          condition = { lt: f.value };
-          break;
-        case 'contains':
-          condition = { contains: f.value, mode: 'insensitive' };
-          break;
-      }
-
-      conditions.push({
-        field_id: fieldId,
-        value: condition,
+    for (const cond of conditions) {
+      const def = await this.prisma.fieldDefinition.findFirst({
+        where: { code: cond.fieldCode },
+        orderBy: { version: 'desc' },
       });
+      if (!def) continue;
+
+      // Map operator to Prisma query based on type
+      let prismaCond: Record<string, unknown> | undefined;
+      switch (def.type) {
+        case 'TEXT':
+          if (cond.operator === 'contains') {
+            prismaCond = {
+              value: { path: '$', string_contains: String(cond.value) },
+            }; // JSON path
+          } else if (cond.operator === 'equals') {
+            prismaCond = { value: String(cond.value) };
+          }
+          break;
+        case 'NUMBER':
+          if (cond.operator === 'gt') {
+            prismaCond = { value: { gt: Number(cond.value) } };
+          } // etc.
+          break;
+        // Add cases for other types, using JSON queries since value is Json
+      }
+      if (prismaCond) {
+        const existingAnd = Array.isArray(where.AND)
+          ? (where.AND as Record<string, unknown>[])
+          : [];
+        where.AND = [...existingAnd, prismaCond];
+      }
     }
 
-    // Step 3: Query FieldValues
-    const values = await this.prisma.fieldValue.findMany({
-      where: {
-        OR: conditions.map(c => ({
-          field_id: c.field_id,
-          value: c.value,
-        })),
-      },
+    const results = await this.prisma.fieldValue.findMany({
+      where: where,
+      select: { entity_id: true },
+      distinct: ['entity_id'],
     });
-
-    // Step 4: Return entityIds
-    const entityIds = values.map(v => v.entity_id);
-    return { entityIds };
+    return results.map((r) => r.entity_id);
   }
 }

@@ -1,0 +1,268 @@
+openapi: 3.0.3
+info:
+  title: Custom Fields Service
+  description: API for dynamic fields management
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /definitions:
+    post:
+      tags:
+        - Definitions
+      summary: Create a new field definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDefinitionDto'
+      responses:
+        '201':
+          description: Field definition created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldDefinition'
+    get:
+      tags:
+        - Definitions
+      summary: List all field definitions
+      responses:
+        '200':
+          description: List of definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FieldDefinition'
+  /assignments:
+    post:
+      tags:
+        - Assignments
+      summary: Assign a field to an entity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssignmentDto'
+      responses:
+        '201':
+          description: Assignment created
+    get:
+      tags:
+        - Assignments
+      summary: List assignments for an entity type
+      parameters:
+        - in: query
+          name: entityType
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FieldAssignment'
+  /values:
+    post:
+      tags:
+        - Values
+      summary: Create a field value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateValueDto'
+      responses:
+        '201':
+          description: Value created
+    get:
+      tags:
+        - Values
+      summary: Get values by entity type and entity IDs
+      parameters:
+        - in: query
+          name: entityType
+          schema:
+            type: string
+        - in: query
+          name: entityIds
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: List of field values
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FieldValue'
+  /filters/search:
+    post:
+      tags:
+        - Filters
+      summary: Search entities by dynamic filters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchFilterDto'
+      responses:
+        '200':
+          description: List of entity IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /aggregate:
+    get:
+      tags:
+        - Aggregates
+      summary: Aggregate values for a field
+      parameters:
+        - in: query
+          name: entityType
+          schema:
+            type: string
+        - in: query
+          name: fieldCode
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Aggregated counts
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+components:
+  schemas:
+    CreateDefinitionDto:
+      type: object
+      required:
+        - code
+        - name
+        - type
+        - version
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        validations:
+          type: object
+          nullable: true
+        version:
+          type: integer
+    FieldDefinition:
+      allOf:
+        - $ref: '#/components/schemas/CreateDefinitionDto'
+        - type: object
+          properties:
+            id:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    CreateAssignmentDto:
+      type: object
+      required:
+        - entity_type
+        - field_id
+        - order
+      properties:
+        entity_type:
+          type: string
+        field_id:
+          type: string
+        order:
+          type: integer
+        visible:
+          type: boolean
+        filterable:
+          type: boolean
+    FieldAssignment:
+      allOf:
+        - $ref: '#/components/schemas/CreateAssignmentDto'
+        - type: object
+          properties:
+            id:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    CreateValueDto:
+      type: object
+      required:
+        - entity_type
+        - entity_id
+        - field_id
+        - value
+      properties:
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+        field_id:
+          type: string
+        value:
+          type: object
+        created_by:
+          type: string
+    FieldValue:
+      allOf:
+        - $ref: '#/components/schemas/CreateValueDto'
+        - type: object
+          properties:
+            id:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    FilterCondition:
+      type: object
+      properties:
+        fieldCode:
+          type: string
+        operator:
+          type: string
+        value:
+          type: object
+    SearchFilterDto:
+      type: object
+      required:
+        - entityType
+        - conditions
+      properties:
+        entityType:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterCondition'

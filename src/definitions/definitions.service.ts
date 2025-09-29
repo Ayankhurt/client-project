@@ -1,61 +1,120 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { CreateDefinitionDto } from './dto/create-definition.dto';
+import { UpdateDefinitionDto } from './dto/update-definition.dto';
+import { FieldDefinition, FieldType } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
-import { Prisma, FieldType } from '@prisma/client';
 
 @Injectable()
 export class DefinitionsService {
   constructor(private prisma: PrismaService) {}
 
-  // Create definition
-  async create(data: Prisma.FieldDefinitionCreateInput) {
-    return this.prisma.fieldDefinition.create({ data });
-  }
+  async create(
+    createDefinitionDto: CreateDefinitionDto,
+  ): Promise<FieldDefinition> {
+    const { code, version } = createDefinitionDto;
+    const existing = await this.prisma.fieldDefinition.findUnique({
+      where: { code_version: { code, version } },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        'Definition with this code and version already exists',
+      );
+    }
 
-  // Get all definitions
-  async findAll() {
-    return this.prisma.fieldDefinition.findMany();
-  }
+    // Parse validations if provided
+    let validations;
+    if (createDefinitionDto.validations) {
+      if (typeof createDefinitionDto.validations === 'string') {
+        validations = JSON.parse(createDefinitionDto.validations) as Record<string, unknown>;
+      } else {
+        validations = createDefinitionDto.validations as Record<string, unknown>;
+      }
+    }
 
-  // Get single definition by id
-  async findOne(id: string) {
-    return this.prisma.fieldDefinition.findUnique({ where: { id } });
-  }
-
-  // ✅ Update with versioning logic
-  async update(id: string, data: Prisma.FieldDefinitionUpdateInput) {
-    const oldDef = await this.prisma.fieldDefinition.findUnique({ where: { id } });
-    if (!oldDef) throw new Error('Definition not found');
+    // Validate based on type (implement type-specific validation logic here)
+    this.validateDefinition(createDefinitionDto.type, validations);
 
     return this.prisma.fieldDefinition.create({
       data: {
-        code: oldDef.code,
-        name: (data.name as string) ?? oldDef.name,
-        type: (data.type as FieldType) ?? oldDef.type,
-        validations: (data.validations as any) ?? oldDef.validations,
-        version: oldDef.version + 1,
+        ...createDefinitionDto,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        validations: validations as any,
       },
     });
   }
 
-  // Delete definition
-  async remove(id: string) {
+  async findAll(code?: string): Promise<FieldDefinition[]> {
+    return this.prisma.fieldDefinition.findMany({
+      where: code ? { code } : undefined,
+      orderBy: { version: 'desc' },
+    });
+  }
+
+  async findOne(id: string): Promise<FieldDefinition> {
+    return this.prisma.fieldDefinition.findUniqueOrThrow({ where: { id } });
+  }
+
+  async update(
+    id: string,
+    updateDefinitionDto: Partial<CreateDefinitionDto>, // allow partial updates
+  ): Promise<FieldDefinition> {
+    // 1️⃣ Fetch existing definition
+    const existing = await this.prisma.fieldDefinition.findUnique({ where: { id } });
+    if (!existing) throw new BadRequestException('Definition not found');
+  
+    // 2️⃣ Parse validations if provided
+    const newValidations = updateDefinitionDto.validations
+      ? (typeof updateDefinitionDto.validations === 'string'
+          ? (JSON.parse(updateDefinitionDto.validations) as Record<string, unknown>)
+          : updateDefinitionDto.validations)
+      : existing.validations;
+  
+    // 3️⃣ Determine if a new version is required
+    const needsNewVersion =
+      (updateDefinitionDto.type && updateDefinitionDto.type !== existing.type) ||
+      (updateDefinitionDto.validations &&
+        JSON.stringify(newValidations) !== JSON.stringify(existing.validations));
+  
+    // 4️⃣ If new version needed, create new row
+    if (needsNewVersion) {
+      return this.prisma.fieldDefinition.create({
+        data: {
+          code: existing.code, // keep same code
+          name: updateDefinitionDto.name ?? existing.name,
+          type: updateDefinitionDto.type ?? existing.type,
+          validations: newValidations as any,
+          version: existing.version + 1,
+        },
+      });
+    }
+  
+    // 5️⃣ Otherwise, update in place
+    return this.prisma.fieldDefinition.update({
+      where: { id },
+      data: {
+        name: updateDefinitionDto.name ?? existing.name,
+        type: updateDefinitionDto.type ?? existing.type,
+        validations: newValidations as any,
+      },
+    });
+  }
+  
+
+  async remove(id: string): Promise<FieldDefinition> {
     return this.prisma.fieldDefinition.delete({ where: { id } });
   }
 
-  // ✅ Schema endpoint – sirf latest version per code
-  async getSchema() {
-    const allDefs = await this.prisma.fieldDefinition.findMany({
-      orderBy: { version: 'desc' },
-    });
-
-    // Har `code` ka sirf latest version return kare
-    const latestMap = new Map<string, any>();
-    for (const def of allDefs) {
-      if (!latestMap.has(def.code)) {
-        latestMap.set(def.code, def);
-      }
+  private validateDefinition(
+    type: FieldType,
+    validations: Record<string, unknown> | undefined,
+  ) {
+    // Implement validation logic based on type, e.g.
+    if (
+      type === 'SINGLE_SELECT' &&
+      (!validations?.options || !Array.isArray(validations.options))
+    ) {
+      throw new BadRequestException('SINGLE_SELECT requires options array');
     }
-
-    return Array.from(latestMap.values());
+    // Add more for other types, required, range, etc.
   }
 }

@@ -1,54 +1,85 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { CreateAssignmentDto } from './dto/create-assignment.dto';
+import { UpdateAssignmentDto } from './dto/update-assignment.dto';
+import { FieldAssignment } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
 
 @Injectable()
 export class AssignmentsService {
   constructor(private prisma: PrismaService) {}
 
-  // ✅ Create Assignment
-  async create(data: { entity_type: string; field_id: string; order: number; visible?: boolean; filterable?: boolean }) {
-    return this.prisma.fieldAssignment.create({
-      data: {
-        entity_type: data.entity_type,
-        order: data.order,
-        visible: data.visible ?? true,
-        filterable: data.filterable ?? false,
-        FieldDefinition: {
-          connect: { id: data.field_id }, // ✅ relation connect
-        },
+  // Create a new assignment
+  async create(createDto: CreateAssignmentDto): Promise<FieldAssignment> {
+    // Check if field_id exists in FieldDefinition
+    const fieldExists = await this.prisma.fieldDefinition.findUnique({
+      where: { id: createDto.field_id },
+    });
+
+    if (!fieldExists) {
+      throw new BadRequestException(
+        `FieldDefinition with id ${createDto.field_id} does not exist`,
+      );
+    }
+
+    // Optional: Check if an assignment with the same entity_type and field_id already exists
+    const existing = await this.prisma.fieldAssignment.findFirst({
+      where: {
+        entity_type: createDto.entity_type,
+        field_id: createDto.field_id,
       },
-      include: { FieldDefinition: true },
     });
+    if (existing) {
+      throw new BadRequestException(
+        `Assignment already exists for entity_type "${createDto.entity_type}" and this field_id`,
+      );
+    }
+
+    return this.prisma.fieldAssignment.create({ data: createDto });
   }
 
-  // ✅ Get All
-  async findAll() {
+  // Get all assignments or filter by entity type
+  async findAll(entityType?: string): Promise<FieldAssignment[]> {
     return this.prisma.fieldAssignment.findMany({
+      where: entityType ? { entity_type: entityType } : undefined,
       include: { FieldDefinition: true },
     });
   }
 
-  // ✅ Get One
-  async findOne(id: string) {
-    return this.prisma.fieldAssignment.findUnique({
+  // Get a single assignment by ID
+  async findOne(id: string): Promise<FieldAssignment> {
+    return this.prisma.fieldAssignment.findUniqueOrThrow({
       where: { id },
       include: { FieldDefinition: true },
     });
   }
 
-  // ✅ Update
-  async update(id: string, data: any) {
+  // Update assignment
+  async update(
+    id: string,
+    updateDto: UpdateAssignmentDto,
+  ): Promise<FieldAssignment> {
+    // Optional: validate if field_id is being updated
+    if (updateDto.field_id) {
+      const fieldExists = await this.prisma.fieldDefinition.findUnique({
+        where: { id: updateDto.field_id },
+      });
+      if (!fieldExists) {
+        throw new BadRequestException(
+          `FieldDefinition with id ${updateDto.field_id} does not exist`,
+        );
+      }
+    }
+
     return this.prisma.fieldAssignment.update({
       where: { id },
-      data,
+      data: updateDto,
       include: { FieldDefinition: true },
     });
   }
 
-  // ✅ Delete
-  async remove(id: string) {
-    return this.prisma.fieldAssignment.delete({
-      where: { id },
-    });
+  // Delete assignment
+  async remove(id: string): Promise<{ message: string }> {
+    await this.prisma.fieldAssignment.delete({ where: { id } });
+    return { message: 'Assignment deleted successfully' };
   }
 }
