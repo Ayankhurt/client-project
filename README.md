@@ -1,98 +1,104 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+📌 Custom Fields Service (NestJS + Prisma)
+🔹 Overview
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Ye microservice entities (Tracking, Orders, Quotations, Items, Documents, etc.) ke liye Notion-style dynamic fields provide karta hai.
+Aap easily naye fields define kar sakte ho, assign kar sakte ho aur unka data (values, filters, aggregates) manage kar sakte ho.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+⚙️ Setup Instructions
+1. Clone & Install
+git clone <repo-url>
+cd custom-fields-service
+npm install
 
-## Description
+2. Configure Database (PostgreSQL)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Create .env file:
 
-## Project setup
+DATABASE_URL="postgresql://username:password@localhost:5432/custom_fields_db"
 
-```bash
-$ npm install
-```
+3. Run Migrations
+npx prisma migrate dev --name init
 
-## Compile and run the project
+4. Start Server
+npm run start:dev
 
-```bash
-# development
-$ npm run start
 
-# watch mode
-$ npm run start:dev
+API will run at:
+👉 http://localhost:3000/api/v1
 
-# production mode
-$ npm run start:prod
-```
+Swagger Docs:
+👉 http://localhost:3000/api/docs
 
-## Run tests
+📚 API Endpoints
+1️⃣ Field Definitions
+Method	Endpoint	Description
+POST	/definitions	Create new field definition
+GET	/definitions	Get all field definitions
+GET	/definitions/:id	Get single field definition
+PATCH	/definitions/:id	Update field definition
+DELETE	/definitions/:id	Delete field definition
+2️⃣ Field Assignments
+Method	Endpoint	Description
+POST	/assignments	Assign field to entity
+GET	/assignments	Get all assignments (filter by entityType)
+GET	/assignments/:id	Get single assignment
+PATCH	/assignments/:id	Update assignment
+DELETE	/assignments/:id	Delete assignment
+3️⃣ Schema
+Method	Endpoint	Description
+GET	/schema?entityType=Order	Get schema with latest field definitions
+4️⃣ Values
+Method	Endpoint	Description
+POST	/values	Create single field value
+POST	/values/batch	Create multiple values for entity
+GET	/values	Get values (filters: entityType, entityIds, grouped)
+GET	/values/:id	Get single value
+PATCH	/values/:id	Update value
+DELETE	/values/:id	Delete value
+5️⃣ Filters
+Method	Endpoint	Description
+POST	/filters/search	Search entities with conditions
 
-```bash
-# unit tests
-$ npm run test
+Request Example:
 
-# e2e tests
-$ npm run test:e2e
+{
+  "entityType": "Order",
+  "conditions": [
+    { "fieldCode": "status", "operator": "eq", "value": "delivered" },
+    { "fieldCode": "amount", "operator": "gt", "value": 1000 }
+  ]
+}
 
-# test coverage
-$ npm run test:cov
-```
+6️⃣ Aggregates
+Method	Endpoint	Description
+GET	/aggregates/:entityType/:fieldCode	Get field aggregations
 
-## Deployment
+Example Response:
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+{
+  "fieldCode": "status",
+  "entityType": "Order",
+  "aggregations": [
+    { "value": "pending", "count": 5 },
+    { "value": "delivered", "count": 12 }
+  ],
+  "total": 17,
+  "fieldDefinition": {
+    "id": "uuid",
+    "code": "status",
+    "name": "Order Status",
+    "type": "select"
+  }
+}
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+🛠 Tech Stack
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+NestJS – backend framework
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Prisma – ORM
 
-## Resources
+PostgreSQL – database
 
-Check out a few resources that may come in handy when working with NestJS:
+Swagger – API docs
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Class-validator – DTO validation
