@@ -24,10 +24,10 @@ npm run start:dev
 
 
 API will run at:
-👉 http://localhost:3000/api/v1
+👉 http://localhost:3000/api/v1/custom-fields
 
 Swagger Docs:
-👉 http://localhost:3000/api/docs
+👉 http://localhost:3000/api
 
 📚 API Endpoints
 1️⃣ Field Definitions
